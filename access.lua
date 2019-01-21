@@ -1,6 +1,5 @@
 package.path = "/usr/local/nginx/lua/?.lua;/usr/local/nginx/lua/lib/?.lua;"
 
-
 -- get ip
 local function get_client_ip()
     local ip = ngx.var.http_x_forwarded_for or ngx.var.remote_addr
@@ -44,9 +43,9 @@ local flag = true
 -- redis
 local redis = require "resty.redis"
 local conn = redis.new()
-local host = '10.5.11.86'
-local port = '6300'
-local auth = '123123'
+local host = 'x.x.x.x'
+local port = 'xxxx'
+local auth = 'xxxx'
 local db = '1'
 
 -- config
@@ -82,7 +81,7 @@ function main()
     
     if ua == nil or host == nil then
         local source = scheme..'://'..host..uri
-        local dest = "http://cap.169kang.com/index.php?continue="..source
+        local dest = "http://baidu.com?continue="..source
         block_ip_2_cap(conn, ip)
         ngx.redirect(dest,302)
         return -1
@@ -92,18 +91,11 @@ function main()
     if string.find(ua, 'Sogou web spider') or string.find(ua, 'YisouSpider') then return 0 end
     if string.find(ua,'360so')  then return 0 end
 
-    -- sogou ---
-    if 'Mozilla/5.0 (Linux; U; Android 4.1.1; zh-CN; GT-N7100 Build/JRO03C) AppleWebKit/534.31 (KHTML, like Gecko) UCBrowser/9.3.0.321 U3/0.8.0 Mobile Safari/534.31' == ua then return 0 end
-    if 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:51.0) Gecko/20100101 Firefox/51.0' == ua then return 0 end
-    
-    -- mip --
-    if 'Mozilla/5.0 (Linux;u;Android 4.2.2;zh-cn;) AppleWebKit/534.46 (KHTML,like Gecko) Version/5.1 Mobile Safari/10600.6.3 (compatible; baidumib;mip; + https://www.mipengine.org)' == ua then return 0 end
-     
     local isblk, err = conn:get('blk:'..ip)
     if isblk ~= ngx.null then
         conn:incr('blk:'..ip)
         local source = scheme..'://'..host..uri
-        local dest = "http://cap.169kang.com/index.php?continue="..source
+        local dest = "http://baidu.com?continue="..source
         ngx.redirect(dest,302) 
         return -1
     end
@@ -187,7 +179,7 @@ function main()
         end
     else
         local source = scheme..'://'..host..uri
-        local dest = "http://cap.169kang.com/index.php?continue="..source
+        local dest = "http://baidu.com?continue="..source
         block_ip_2_cap(conn, ip)
         return -1
     end
