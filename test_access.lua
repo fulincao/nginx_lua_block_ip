@@ -1,5 +1,23 @@
 package.path = "/usr/local/nginx/lua/?.lua;/usr/local/nginx/lua/lib/?.lua;"
 
+-- flag
+local flag = true
+-- redis
+local redis = require "resty.redis"
+local conn = redis.new()
+local host = '10.5.0.80'
+local port = '6300'
+local auth = '123123'
+local db = '1'
+
+-- config
+local mx_day = 100
+local mx_hou = 50
+local mx_min = 25
+local mx_sec = 5
+local block_times = 5
+local block_days = 4
+
 
 -- get ip
 local function get_client_ip()
@@ -17,7 +35,7 @@ end
 local function block_ip_2_cap(conn, ip)
     conn:init_pipeline()
     conn:set('blk:'..ip, 1)
-    conn:expire('blk:'..ip, 7*24*3600)
+    conn:expire('blk:'..ip, block_days*24*3600)
     init_keys(conn, 'vis:hh:'..ip, 3600)
     init_keys(conn, 'vis:dd:'..ip, 3600*24)
     init_keys(conn, 'vis:mm:'..ip, 60)
@@ -37,23 +55,6 @@ local function close_redis(red)
         red:close()
     end
 end
-
--- flag
-local flag = true
-
--- redis
-local redis = require "resty.redis"
-local conn = redis.new()
-local host = '10.5.11.86'
-local port = '6300'
-local auth = '123123'
-local db = '1'
-
--- config
-local mx_day = 100
-local mx_hou = 50
-local mx_min = 25
-local mx_sec = 5
 
 function main() 
     conn:set_timeout(2000)
@@ -87,7 +88,16 @@ function main()
         ngx.redirect(dest,302)
         return -1
     end
-       
+   
+    local enterblk, err = conn:get('enterblk:'..ip)
+    if enterblk ~= ngx.null and tonumber(enterblk) >= block_times  then
+        conn:expire('enterblk:'..ip, block_days*24*3600)
+        local source = scheme..'://'..host..uri
+        local dest = "http://cap.169kang.com/index.php?continue="..source
+        ngx.redirect('http://cap.169kang.com/404.html',302)
+        return -1
+    end
+
     if string.find(ua,'Baiduspider') or string.find(ua,'360spider') then return 0 end
     if string.find(ua, 'Sogou web spider') or string.find(ua, 'YisouSpider') then return 0 end
     if string.find(ua,'360so')  then return 0 end
@@ -189,9 +199,11 @@ function main()
         local source = scheme..'://'..host..uri
         local dest = "http://cap.169kang.com/index.php?continue="..source
         block_ip_2_cap(conn, ip)
+        conn:incr('enterblk:'..ip)
         return -1
     end
     return 1
 end
+
 local status = main()
 close_redis(conn)
